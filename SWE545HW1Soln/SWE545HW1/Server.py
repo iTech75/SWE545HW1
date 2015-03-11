@@ -1,31 +1,22 @@
 import threading
 import socket
+import Queue
+import datetime
 
-class ServerThread(threading.Thread):
+class RequestHandler(threading.Thread):
     def __init__(self, clientSocket, clientAddress):
+        super(RequestHandler, self).__init__()
+        assert isinstance(clientSocket, socket.socket)
+        assert isinstance(clientAddress, tuple)
+
         self.clientSocket = clientSocket
         self.clientAddress = clientAddress
 
     def run(self):
         while True:
-            self.clientSocket.re
-
-class Server(threading.Thread):
-    """description of class"""
-    def __init__(self):
-        threading.Thread.__init__(self)
-        self.socket = socket.socket()
-
-    def run(self):
-        self.socket.bind((socket.gethostname(), 12345))
-        self.socket.listen(5)
-        print("Server started")
-        while True:
-            clientSocket, clientAddress = self.socket.accept()
-
-            print "Clint accepted"%clientAddress
-
-        print("Server ended")
+            request = self.clientSocket.recv(1024)
+            response = self.parser(request)
+            self.clientSocket.send(response)
 
     def parser(self, request):
         strippedrequest = request.strip()
@@ -48,3 +39,23 @@ class Server(threading.Thread):
             response = "ERR"
 
         return response
+            
+
+class Server(threading.Thread):
+    """description of class"""
+    def __init__(self):
+        super(Server, self).__init__()
+        self.socket = socket.socket()
+        self.running = True
+
+    def run(self):
+        self.socket.bind(("", 12345))
+        self.socket.listen(5)
+        print("Server started")
+        while self.running:
+            clientSocket, clientAddress = self.socket.accept()
+            print "Clint accepted {0}".format(clientAddress)
+            handler = RequestHandler(clientSocket, clientAddress)
+            handler.start()
+
+        print("Server ended")

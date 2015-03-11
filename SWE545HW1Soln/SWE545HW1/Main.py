@@ -3,7 +3,8 @@ import Server
 def main():
     server = Server.Server()
     server.start()
-    print "Exit"
+    while server.running:
+        pass
 
-if __name__=="__main__":
+if __name__== "__main__":
     main()
