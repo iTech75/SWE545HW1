@@ -45,17 +45,26 @@ class Server(threading.Thread):
     """description of class"""
     def __init__(self):
         super(Server, self).__init__()
-        self.socket = socket.socket()
-        self.running = True
+        serverSocket = socket.socket()
+        running = True
 
     def run(self):
-        self.socket.bind(("", 12345))
-        self.socket.listen(5)
+        serverSocket.bind(("", 12345))
+        serverSocket.listen(5)
         print("Server started")
-        while self.running:
-            clientSocket, clientAddress = self.socket.accept()
+        while running:
+            clientSocket, clientAddress = serverSocket.accept()
             print "Clint accepted {0}".format(clientAddress)
             handler = RequestHandler(clientSocket, clientAddress)
             handler.start()
 
         print("Server ended")
+
+def main():
+    server = Server()
+    server.start()
+    while server.running:
+        pass
+
+if __name__== "__main__":
+    main()
