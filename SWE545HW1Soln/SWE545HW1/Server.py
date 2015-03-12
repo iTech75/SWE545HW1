@@ -2,12 +2,15 @@ import threading
 import socket
 import Queue
 import datetime
+import random
 
 class ResponseSender(threading.Thread):
     """
     ResponseHandler
 
-    Listens queue and send responses over the socket
+    Listens queue and send responses over the socket.
+
+    Sometimes, before sending response, also sends time to the client.
     """
     def __init__(self, queue):
         super(ResponseSender, self).__init__()
@@ -20,7 +23,15 @@ class ResponseSender(threading.Thread):
         
         while self.running:
             nextItem = self.queue.get()
-            nextItem[0].send(nextItem[1])
+            clientSocket = nextItem[0]
+            response = nextItem[1]
+            if random.randint(0, 1) == 1:
+                clientSocket.send("TIM" + datetime.datetime.now().isoformat(" "))
+                timeResponse = clientSocket.recv(1024)
+                if timeResponse != "Peki":
+                    print "Error in time response, should be 'Peki'"
+
+            clientSocket.send(response)
 
     def EnqueueNewResponseToBeSend(self, targetSocket, response):
         self.queue.put((targetSocket, response))

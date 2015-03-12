@@ -24,6 +24,10 @@ class Client(threading.Thread):
             request = raw_input("Enter your message > ")
             requestSocket.send(request)
             response = responseSocket.recv(1024)
+            if response[:3] == "TIM":
+                responseSocket.send("Peki")
+                print "Time received: " + response[3:]
+                response = responseSocket.recv(1024)
             print "Request:{0}, Response:{1}".format(request, response)
 
         print "DONE!"
