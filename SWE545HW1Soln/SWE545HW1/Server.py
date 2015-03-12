@@ -3,6 +3,22 @@ import socket
 import Queue
 import datetime
 
+class ResponseSender(threading.thread):
+    def __init__(self, queue, responseSocket):
+        super(ResponseSender, self).__init__()
+        assert isinstance(queue, Queue.Queue)
+        assert isinstance(responseSocket, socket.socket)
+
+        self.running = True
+        self.queue = queue
+        self.responseSocket = responseSocket
+
+    def run(self):
+        
+        while self.running:
+            response = self.queue.get()
+            self.responseSocket.send(response)
+
 class RequestHandler(threading.Thread):
     def __init__(self, clientSocket, clientAddress):
         super(RequestHandler, self).__init__()
@@ -45,14 +61,14 @@ class Server(threading.Thread):
     """description of class"""
     def __init__(self):
         super(Server, self).__init__()
-        serverSocket = socket.socket()
-        running = True
+        self.running = True
 
     def run(self):
+        serverSocket = socket.socket()
         serverSocket.bind(("", 12345))
         serverSocket.listen(5)
         print("Server started")
-        while running:
+        while self.running:
             clientSocket, clientAddress = serverSocket.accept()
             print "Clint accepted {0}".format(clientAddress)
             handler = RequestHandler(clientSocket, clientAddress)
