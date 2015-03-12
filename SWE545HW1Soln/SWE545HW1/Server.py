@@ -3,36 +3,51 @@ import socket
 import Queue
 import datetime
 
-class ResponseSender(threading.thread):
-    def __init__(self, queue, responseSocket):
+class ResponseSender(threading.Thread):
+    """
+    ResponseHandler
+
+    Listens queue and send responses over the socket
+    """
+    def __init__(self, queue):
         super(ResponseSender, self).__init__()
         assert isinstance(queue, Queue.Queue)
-        assert isinstance(responseSocket, socket.socket)
 
         self.running = True
         self.queue = queue
-        self.responseSocket = responseSocket
 
     def run(self):
         
         while self.running:
-            response = self.queue.get()
-            self.responseSocket.send(response)
+            nextItem = self.queue.get()
+            nextItem[0].send(nextItem[1])
+
+    def EnqueueNewResponseToBeSend(self, targetSocket, response):
+        self.queue.put((targetSocket, response))
 
 class RequestHandler(threading.Thread):
-    def __init__(self, clientSocket, clientAddress):
+    """
+    RequestHandler
+
+    Parses the requests coming from client then enqueues the responses to be send back to the client.
+    """
+    def __init__(self, clientSocket, clientAddress, clientResponseSocket, responseSender):
         super(RequestHandler, self).__init__()
         assert isinstance(clientSocket, socket.socket)
         assert isinstance(clientAddress, tuple)
+        assert isinstance(clientResponseSocket, socket.socket)
+        assert isinstance(responseSender, ResponseSender)
 
         self.clientSocket = clientSocket
         self.clientAddress = clientAddress
+        self.clientResponseSocket = clientResponseSocket
+        self.responseSender = responseSender
 
     def run(self):
         while True:
             request = self.clientSocket.recv(1024)
             response = self.parser(request)
-            self.clientSocket.send(response)
+            self.responseSender.EnqueueNewResponseToBeSend(self.clientResponseSocket, response)
 
     def parser(self, request):
         strippedrequest = request.strip()
@@ -58,25 +73,46 @@ class RequestHandler(threading.Thread):
             
 
 class Server(threading.Thread):
-    """description of class"""
+    """
+    Server
+
+    Server object, initiates the environment and sockets.
+    """
     def __init__(self):
         super(Server, self).__init__()
         self.running = True
 
     def run(self):
+        queue = Queue.Queue()
+        responseSender = ResponseSender(queue)
+        responseSender.start()
+
         serverSocket = socket.socket()
+        responseSocket = socket.socket()
+
         serverSocket.bind(("", 12345))
+        responseSocket.bind(("", 12346))
         serverSocket.listen(5)
+        responseSocket.listen(5)
         print("Server started")
+
         while self.running:
             clientSocket, clientAddress = serverSocket.accept()
             print "Clint accepted {0}".format(clientAddress)
-            handler = RequestHandler(clientSocket, clientAddress)
+
+            clientResponseSocket, clientResponseAddress = responseSocket.accept()
+            print "Response connection established from: {0}".format(clientResponseAddress)
+            handler = RequestHandler(clientSocket, clientAddress, clientResponseSocket, responseSender)
             handler.start()
 
         print("Server ended")
 
 def main():
+    """
+    main
+
+    entry point for server
+    """
     server = Server()
     server.start()
     while server.running:
