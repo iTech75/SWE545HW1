@@ -2,6 +2,23 @@ import socket
 import threading
 import time
 
+class ClientResponseHandler(threading.Thread):
+    def __init__(self):
+        super(ClientResponseHandler, self).__init__()
+        self.running = True
+
+    def run(self):
+        responseSocket = socket.socket()
+        responseSocket.connect(("localhost", 12346))
+        while self.running:
+            response = responseSocket.recv(1024)
+            if response[:3] == "TIM":
+                responseSocket.send("Peki")
+                print "Time received: " + response[3:]
+            else:
+                print "Response:{0}".format(response)
+        responseSocket.close()
+                
 class Client(threading.Thread):
     """
     Client
@@ -16,21 +33,18 @@ class Client(threading.Thread):
     def run(self):
         requestSocket = socket.socket()
         requestSocket.connect(("localhost", 12345))
-        responseSocket = socket.socket()
-        responseSocket.connect(("localhost", 12346))
+        responseHandler = ClientResponseHandler()
+        responseHandler.start()
 
         request = None
+        print "You can enter your messages to server, when the response arrives, you will be notified!"
         while request <> "QUI":
-            request = raw_input("Enter your message > ")
+            request = raw_input()
             requestSocket.send(request)
-            response = responseSocket.recv(1024)
-            if response[:3] == "TIM":
-                responseSocket.send("Peki")
-                print "Time received: " + response[3:]
-                response = responseSocket.recv(1024)
-            print "Request:{0}, Response:{1}".format(request, response)
 
+        requestSocket.close()
         print "DONE!"
+        responseHandler.running = False
         raw_input()
         self.running = False
 

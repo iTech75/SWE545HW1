@@ -53,8 +53,21 @@ class RequestHandler(threading.Thread):
         self.clientAddress = clientAddress
         self.clientResponseSocket = clientResponseSocket
         self.responseSender = responseSender
+        self.__definitions = {}
+
+    def __load_definitions(self):
+        f = file("codes.txt", "r")
+        for line in f:
+            line = line.strip()
+            split_result = line.split(' ', 1)
+            if split_result.__len__() == 2:
+                self.__definitions[split_result[1]] = split_result[0]
+            else:
+                raise Exception("Error in codes file!")
+        f.close()
 
     def run(self):
+        self.__load_definitions()
         while True:
             request = self.clientSocket.recv(1024)
             response = self.parser(request)
